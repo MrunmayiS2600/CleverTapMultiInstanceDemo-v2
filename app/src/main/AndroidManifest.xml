@@ -21,6 +21,9 @@
         <meta-data
             android:name="CLEVERTAP_TOKEN"
             android:value="${cleverTapProject1Token}" />
+        <meta-data
+            android:name="CLEVERTAP_USE_GOOGLE_AD_ID"
+            android:value="1"/>
 
         <activity
             android:name=".MainActivity"

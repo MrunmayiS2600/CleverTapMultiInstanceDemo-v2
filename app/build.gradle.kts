@@ -73,4 +73,8 @@ dependencies {
     implementation("com.clevertap.android:clevertap-android-sdk:6.2.1")
     implementation("com.android.installreferrer:installreferrer:2.2")
     implementation("androidx.work:work-runtime:2.9.1")
+
+    // Required for useGoogleAdId/CLEVERTAP_USE_GOOGLE_AD_ID to actually read the GAID;
+    // without it CleverTap silently falls back to a random per-install GUID.
+    implementation("com.google.android.gms:play-services-ads-identifier:18.3.0")
 }
