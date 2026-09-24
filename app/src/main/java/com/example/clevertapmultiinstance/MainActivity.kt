@@ -1,18 +1,30 @@
 package com.example.clevertapmultiinstance
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.example.clevertapmultiinstance.databinding.ActivityMainBinding
-import java.util.UUID
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
+    // The FCM token is fetched/registered regardless of this permission - it only
+    // gates whether a notification can be shown, not whether the token exists. We
+    // still ask for it up front so push notifications actually display later.
+    private val notificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        requestNotificationPermissionIfNeeded()
 
         binding.btnLogin.setOnClickListener {
             val phone = binding.etPhone.text?.toString()?.trim().orEmpty()
@@ -21,26 +33,39 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
             binding.tilPhone.error = null
-            loginToBothDashboards(phone)
+            loginToAllDashboards(phone)
         }
     }
 
-    private fun loginToBothDashboards(phone: String) {
-        // Project 1: Identity = the user's real phone number.
-        val project1Profile = HashMap<String, Any>()
-        project1Profile["Identity"] = phone
-        project1Profile["Phone"] = phone
-        CleverTapMultiInstanceApp.project1Instance.onUserLogin(project1Profile)
-        CleverTapMultiInstanceApp.project1Instance.pushEvent("Logged In")
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return // granted at install below API 33
+        val granted = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!granted) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
-        // Project 2: Identity = a random id, unrelated to the phone number.
-        val randomUserId = "user_${UUID.randomUUID().toString().take(8)}"
-        val project2Profile = HashMap<String, Any>()
-        project2Profile["Identity"] = randomUserId
-        CleverTapMultiInstanceApp.project2Instance.onUserLogin(project2Profile)
-        CleverTapMultiInstanceApp.project2Instance.pushEvent("Logged In")
+    private fun loginToAllDashboards(phone: String) {
+        // Same Identity (the phone number) goes to all three instances, so all three
+        // dashboards resolve to the same user. Combined with Google Ad ID being enabled
+        // on every instance (device GUID derived from the shared GAID), both the Identity
+        // and the underlying CleverTap ID line up across all three accounts.
+        val profile = HashMap<String, Any>()
+        profile["Identity"] = phone
+        profile["Phone"] = phone
 
-        binding.tvStatus.text =
-            "Project 1 dashboard -> Identity: $phone\nProject 2 dashboard -> Identity: $randomUserId"
+        val instances = listOf(
+            CleverTapMultiInstanceApp.project1Instance,
+            CleverTapMultiInstanceApp.project2Instance,
+            CleverTapMultiInstanceApp.project3Instance
+        )
+        instances.forEach { instance ->
+            instance.onUserLogin(profile)
+            instance.pushEvent("Logged In")
+        }
+
+        binding.tvStatus.text = "Identity sent to all 3 dashboards: $phone"
     }
 }

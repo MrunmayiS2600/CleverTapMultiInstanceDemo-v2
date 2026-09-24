@@ -1,31 +1,55 @@
 # CleverTap Multi-Instance Demo
 
-Minimal Android (Kotlin) app demonstrating CleverTap's multi-instance SDK support,
-sending data to two separate CleverTap accounts with different `onUserLogin` identity logic.
+Android (Kotlin) app demonstrating CleverTap's multi-instance SDK support: one app
+sending the same user data to **three** separate CleverTap accounts at once.
 
-## Where the two projects are configured
+## The three instances
 
-- **Project 1** (default instance) — [AndroidManifest.xml](app/src/main/AndroidManifest.xml)
-  via the `CLEVERTAP_ACCOUNT_ID` / `CLEVERTAP_TOKEN` meta-data tags.
-  Replace `YOUR_PROJECT1_ACCOUNT_ID` / `YOUR_PROJECT1_ACCOUNT_TOKEN` with the real values.
-- **Project 2** (additional instance) — [CleverTapMultiInstanceApp.kt](app/src/main/java/com/example/clevertapmultiinstance/CleverTapMultiInstanceApp.kt)
-  via `PROJECT2_ACCOUNT_ID` / `PROJECT2_ACCOUNT_TOKEN`.
-  Replace with a second, real CleverTap account's credentials.
+- **Project 1** — the default instance, configured via `AndroidManifest.xml` meta-data
+  (`CLEVERTAP_ACCOUNT_ID` / `CLEVERTAP_TOKEN`, resolved from `local.properties`).
+- **Project 2** and **Project 3** — additional instances created in code
+  ([CleverTapMultiInstanceApp.kt](app/src/main/java/com/example/clevertapmultiinstance/CleverTapMultiInstanceApp.kt)),
+  credentials resolved from `local.properties` via generated `BuildConfig` fields.
 
-Both are placeholders 
+All three enable `useGoogleAdId`/`CLEVERTAP_USE_GOOGLE_AD_ID`, so each instance derives its
+CleverTap device ID from the device's Google Ad ID (GAID) instead of a random UUID. Since
+it's the same physical device, all three end up with the same underlying CleverTap ID -
+no custom-ID workaround needed.
 
-## onUserLogin behavior
+## Login behavior
 
-- Project 1 (`MainActivity.kt`): `Identity` = the phone number the user types in.
-- Project 2 (`MainActivity.kt`): `Identity` = a random id generated per login (`user_xxxxxxxx`),
-  unrelated to the phone number.
+Tapping login in `MainActivity.kt` sends the **same** profile (`Identity` and `Phone` = the
+phone number typed in) to all three instances via `onUserLogin`, followed by a `Logged In`
+event on each. So for a given login: same Identity, same GAID-derived CleverTap ID, and
+(see below) the same FCM push token, across all three dashboards.
 
-Both instances also fire a `Logged In` event right after `onUserLogin`, so you can see
-activity land on both dashboards.
+## Push notifications (FCM)
 
-## Running it
+`DemoFcmService` and the startup code in `CleverTapMultiInstanceApp.kt` fetch the device's
+Firebase Cloud Messaging token once and register it (`pushFcmRegistrationId`) on all three
+instances - same device, same token, sent to all three. `MainActivity.kt` requests the
+`POST_NOTIFICATIONS` runtime permission on first launch (Android 13+) so notifications can
+actually be shown; the token itself is fetched/registered regardless of that permission.
 
-1. Open this folder in Android Studio — it will generate the Gradle wrapper and sync automatically.
-2. Fill in the four placeholder credential strings described above.
-3. Run on a device/emulator, enter a phone number, tap the login button.
-4. Check both CleverTap dashboards (Profiles / Events) for the respective `Identity` values.
+This requires a real Firebase project - see setup below.
+
+## Setup
+
+1. Open this folder in Android Studio (or run via Gradle/CLI) - it generates the wrapper
+   and syncs automatically.
+2. Copy `local.properties.example` to `local.properties` and fill in real Account
+   ID/Token pairs for three CleverTap accounts (`CLEVERTAP_PROJECT1_*`, `_PROJECT2_*`,
+   `_PROJECT3_*`).
+3. Create a Firebase project with an Android app registered under package name
+   `com.example.clevertapmultiinstance`, download its `google-services.json`, and place it
+   at `app/google-services.json`. This file is gitignored - **never commit it**, since it
+   embeds a live API key. Without it the build fails (the Google Services Gradle plugin
+   requires the file to exist).
+4. Run on a device/emulator, allow the notification permission prompt, enter a phone
+   number, tap login.
+5. Check all three CleverTap dashboards (Profiles / Events) for the same `Identity` and
+   the same device-registered push token.
+
+## Repository
+
+`github.com/MrunmayiS2600/CleverTapMultiInstanceDemo-v2`

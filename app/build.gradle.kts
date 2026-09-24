@@ -3,6 +3,7 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("com.google.gms.google-services")
 }
 
 // CleverTap credentials are kept out of source control: they live in
@@ -38,6 +39,15 @@ android {
         buildConfigField(
             "String", "CLEVERTAP_PROJECT2_TOKEN",
             "\"${cleverTapCred("CLEVERTAP_PROJECT2_TOKEN", "YOUR_PROJECT2_ACCOUNT_TOKEN")}\""
+        )
+
+        buildConfigField(
+            "String", "CLEVERTAP_PROJECT3_ACCOUNT_ID",
+            "\"${cleverTapCred("CLEVERTAP_PROJECT3_ACCOUNT_ID", "YOUR_PROJECT3_ACCOUNT_ID")}\""
+        )
+        buildConfigField(
+            "String", "CLEVERTAP_PROJECT3_TOKEN",
+            "\"${cleverTapCred("CLEVERTAP_PROJECT3_TOKEN", "YOUR_PROJECT3_ACCOUNT_TOKEN")}\""
         )
     }
 
@@ -77,4 +87,9 @@ dependencies {
     // Required for useGoogleAdId/CLEVERTAP_USE_GOOGLE_AD_ID to actually read the GAID;
     // without it CleverTap silently falls back to a random per-install GUID.
     implementation("com.google.android.gms:play-services-ads-identifier:18.3.0")
+
+    // Firebase Cloud Messaging - the FCM token it hands us is pushed identically to
+    // all 3 CleverTap instances, just like the GAID and the Identity.
+    implementation(platform("com.google.firebase:firebase-bom:33.4.0"))
+    implementation("com.google.firebase:firebase-messaging")
 }

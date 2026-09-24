@@ -10,3 +10,7 @@
 local.properties
 app/build/
 build/
+
+# Contains a real Firebase API key shared across many other apps' package names -
+# never commit it. See README for how to provide your own.
+app/google-services.json
